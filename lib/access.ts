@@ -1,0 +1,54 @@
+import { supabase } from "./supabase";
+import { approveChatJoinRequest } from "./telegram";
+
+function chatIds(): number[] {
+  const curso = process.env.TELEGRAM_CURSO_CHAT_ID;
+  const vip = process.env.TELEGRAM_VIP_CHAT_ID;
+  if (!curso || !vip) throw new Error("Faltan los chat ids de Telegram (curso/vip)");
+  return [Number(curso), Number(vip)];
+}
+
+async function hasPaid(personId: string): Promise<boolean> {
+  const { data } = await supabase
+    .from("purchases")
+    .select("id")
+    .eq("person_id", personId)
+    .eq("status", "paid")
+    .limit(1);
+  return (data?.length ?? 0) > 0;
+}
+
+// Punto único donde se decide si alguien entra a un grupo. Se llama tras
+// cualquier evento que pueda cambiar la elegibilidad de una persona: un pago
+// confirmado, la vinculación de su Telegram vía /start, o una nueva
+// chat_join_request. Un solo pago da acceso a AMBOS grupos (Curso y VIP), así
+// que se intenta aprobar los dos en el mismo paso, sin importar en qué orden
+// ocurrieron el pago y la solicitud de unión.
+export async function tryApproveIfEligible(telegramUserId: number): Promise<void> {
+  const { data: person } = await supabase
+    .from("people")
+    .select("id")
+    .eq("telegram_user_id", telegramUserId)
+    .maybeSingle();
+  if (!person) return;
+
+  if (!(await hasPaid(person.id))) return;
+
+  for (const chatId of chatIds()) {
+    const { data: pendingRequest } = await supabase
+      .from("telegram_join_requests")
+      .select("id")
+      .eq("telegram_user_id", telegramUserId)
+      .eq("chat_id", chatId)
+      .eq("status", "pending")
+      .maybeSingle();
+    if (!pendingRequest) continue;
+
+    if (await approveChatJoinRequest(chatId, telegramUserId)) {
+      await supabase
+        .from("telegram_join_requests")
+        .update({ status: "approved", resolved_at: new Date().toISOString() })
+        .eq("id", pendingRequest.id);
+    }
+  }
+}
