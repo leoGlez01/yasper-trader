@@ -6,12 +6,26 @@ export function HeroVideo({ src }: { src?: string }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [muted, setMuted] = useState(false);
 
-  // Los navegadores solo permiten autoplay si el video empieza silenciado —
-  // se fuerza también por ref (no solo por el atributo JSX) para que sea
-  // consistente entre navegadores.
+  // Intenta reproducir con sonido. La mayoría de navegadores bloquean el
+  // autoplay con audio la primera vez que alguien visita el sitio — si eso
+  // pasa, reintenta silenciado (siempre permitido) para que el video nunca
+  // se quede pausado esperando un clic.
   useEffect(() => {
-    if (videoRef.current) videoRef.current.muted = false;
-  }, []);
+    const video = videoRef.current;
+    if (!video || !src) return;
+
+    video.muted = false;
+    setMuted(false);
+
+    const playPromise = video.play();
+    if (playPromise) {
+      playPromise.catch(() => {
+        video.muted = true;
+        setMuted(true);
+        video.play().catch(() => {});
+      });
+    }
+  }, [src]);
 
   function toggleMute() {
     const video = videoRef.current;
@@ -26,8 +40,6 @@ export function HeroVideo({ src }: { src?: string }) {
         <video
           ref={videoRef}
           src={src}
-          autoPlay
-          muted
           loop
           playsInline
           poster="/brand/yasper-isotipo.jpg"
