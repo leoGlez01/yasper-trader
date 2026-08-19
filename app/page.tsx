@@ -49,7 +49,7 @@ function Hero() {
           <Reveal delay={200}>
             <p className="mt-5 max-w-xl text-lg text-white/70">
               Aprende a operar Oro, Nasdaq y Dow Jones directamente conmigo, y entra de una vez al
-              grupo VIP donde comparto análisis y sesiones en vivo todos los días.
+              grupo VIP donde comparto análisis.
             </p>
           </Reveal>
 

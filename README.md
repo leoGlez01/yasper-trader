@@ -40,6 +40,8 @@ npm install
    registra el webhook del bot. Copia los dos links que imprime a `NEXT_PUBLIC_TELEGRAM_CURSO_JOIN_LINK`
    y `NEXT_PUBLIC_TELEGRAM_VIP_JOIN_LINK` en tu `.env.local`.
 
+Si quieres la guía operativa paso a paso para este flujo, revisa [telegram_bot.md](telegram_bot.md).
+
 ### 4. Configurar Stripe
 
 1. En modo de prueba, crea un producto con un Price de pago único.
