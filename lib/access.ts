@@ -11,11 +11,13 @@ function chatIds(): number[] {
 async function hasPaid(personId: string): Promise<boolean> {
   const { data } = await supabase
     .from("purchases")
-    .select("id")
+    .select("id, next_payment_at")
     .eq("person_id", personId)
     .eq("status", "paid")
     .limit(1);
-  return (data?.length ?? 0) > 0;
+  return (data ?? []).some(
+    (purchase) => !purchase.next_payment_at || new Date(purchase.next_payment_at) > new Date(),
+  );
 }
 
 // Punto único donde se decide si alguien entra a un grupo. Se llama tras

@@ -24,7 +24,7 @@ export function SiteHeader() {
       className={`sticky top-0 z-50 border-b transition-all duration-300 ${
         scrolled
           ? "border-panel-border bg-background/80 shadow-[0_1px_0_0_rgba(0,0,0,0.03)] backdrop-blur-md"
-          : "border-transparent bg-background/0"
+          : "border-transparent bg-background/95 backdrop-blur-sm"
       }`}
     >
       <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">

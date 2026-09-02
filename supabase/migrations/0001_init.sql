@@ -24,14 +24,17 @@ create table link_tokens (
   used_at     timestamptz
 );
 
--- Compra única: da acceso permanente a ambos grupos de Telegram (Curso y VIP).
--- Sin suscripciones — un solo pago, sin cobros recurrentes.
+-- Pago o suscripcion mensual: da acceso a ambos grupos mientras el pago este vigente.
 create table purchases (
   id                          uuid primary key default gen_random_uuid(),
   person_id                   uuid not null references people(id),
   stripe_checkout_session_id  text unique,
   stripe_payment_intent_id    text,
-  status                      text not null default 'pending' check (status in ('pending', 'paid', 'refunded')),
+  stripe_subscription_id      text unique,
+  status                      text not null default 'pending' check (status in ('pending', 'paid', 'past_due', 'canceled', 'refunded')),
+  subscription_status         text,
+  next_payment_at             timestamptz,
+  last_payment_failed_at      timestamptz,
   amount_total                integer,
   currency                    text,
   created_at                  timestamptz not null default now(),

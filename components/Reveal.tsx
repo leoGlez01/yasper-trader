@@ -15,11 +15,13 @@ export function Reveal({
   className?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const [animationReady, setAnimationReady] = useState(false);
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+    setAnimationReady(true);
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
@@ -38,7 +40,9 @@ export function Reveal({
       ref={ref}
       style={{ transitionDelay: visible ? `${delay}ms` : "0ms" }}
       className={`transition-all duration-700 ease-out motion-reduce:transition-opacity motion-reduce:duration-300 ${
-        visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8 motion-reduce:translate-y-0"
+        visible || !animationReady
+          ? "opacity-100 translate-y-0"
+          : "opacity-0 translate-y-8 motion-reduce:translate-y-0"
       } ${className}`}
     >
       {children}

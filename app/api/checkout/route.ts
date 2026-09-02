@@ -10,6 +10,14 @@ export async function POST() {
     return NextResponse.json({ error: "El producto no está configurado" }, { status: 500 });
   }
 
+  let price;
+  try {
+    price = await stripe.prices.retrieve(priceId);
+  } catch (error) {
+    console.error("No se pudo obtener el precio de Stripe", error);
+    return NextResponse.json({ error: "El precio de Stripe no es válido" }, { status: 500 });
+  }
+
   const { data: person, error: personError } = await supabase
     .from("people")
     .insert({})
@@ -31,12 +39,13 @@ export async function POST() {
 
   let session;
   try {
+    const mode = price.type === "recurring" ? "subscription" : "payment";
     session = await stripe.checkout.sessions.create({
-      mode: "payment",
-      payment_method_types: ["card"],
+      mode,
+      managed_payments: { enabled: false },
       line_items: [{ price: priceId, quantity: 1 }],
       client_reference_id: person.id,
-      customer_creation: "always",
+      ...(mode === "payment" ? { customer_creation: "always" as const } : {}),
       success_url: `${siteUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${siteUrl}/checkout/cancel`,
     });

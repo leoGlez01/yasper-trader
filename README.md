@@ -1,7 +1,6 @@
 # Yasper Trader
 
-Sitio web de Yasper — Mentoría de Traders. Un solo producto vía Stripe, pago único, sin
-mensualidades: **Curso Cero a Trader**, que desbloquea a la vez los dos grupos privados de
+Sitio web de Yasper — Mentoría de Traders. Un producto vía Stripe con cobro mensual: **Curso Cero a Trader**, que desbloquea a la vez los dos grupos privados de
 Telegram (Curso y VIP).
 
 El acceso a ambos grupos se protege sin exponer nunca un link "secreto": los grupos exigen
@@ -33,7 +32,7 @@ npm install
 3. Añade tu bot como **administrador** de ambos grupos, con el permiso "Invitar usuarios"
    (`can_invite_users`). No necesita ningún otro permiso.
 4. Completa en `.env.local`: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CURSO_CHAT_ID`, `TELEGRAM_VIP_CHAT_ID`,
-   `TELEGRAM_WEBHOOK_SECRET` (invéntate una cadena aleatoria larga), `NEXT_PUBLIC_SITE_URL` (debe
+   `TELEGRAM_WEBHOOK_SECRET` (invéntate una cadena aleatoria larga), `TELEGRAM_CLIENT_CHAT_ID` (chat privado del cliente para avisos), `NEXT_PUBLIC_SITE_URL` (debe
    ser una URL HTTPS pública para que Telegram pueda llamarla — usa tu dominio de Vercel o un
    túnel como ngrok en desarrollo) y `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` (sin el `@`).
 5. Corre `npm run setup:telegram` — esto crea el link de "solicitar unirse" de cada grupo y
@@ -44,15 +43,20 @@ Si quieres la guía operativa paso a paso para este flujo, revisa [telegram_bot.
 
 ### 4. Configurar Stripe
 
-1. En modo de prueba, crea un producto con un Price de pago único.
+1. En modo de prueba, crea un producto con un Price recurrente mensual (`recurring/month`).
 2. Copia el ID del Price a `STRIPE_PRICE_ID`, y tu clave secreta a `STRIPE_SECRET_KEY`.
 3. En desarrollo, usa la [Stripe CLI](https://docs.stripe.com/stripe-cli) para reenviar webhooks:
    ```bash
    stripe listen --forward-to localhost:3000/api/webhooks/stripe
    ```
-   La CLI te da un `whsec_...` — pégalo en `STRIPE_WEBHOOK_SECRET`. En producción, crea el
+   La CLI te da un `whsec_...` — pégalo en `STRIPE_WEBHOOK_SECRET`. Escucha también `invoice.paid`,
+   `invoice.payment_failed`, `customer.subscription.updated` y `customer.subscription.deleted`.
+   En producción, crea el
    webhook endpoint desde el Dashboard de Stripe apuntando a
-   `https://tudominio.com/api/webhooks/stripe`, suscrito solo a `checkout.session.completed`.
+   `https://tudominio.com/api/webhooks/stripe`, suscrito a esos cinco eventos.
+
+   Para que el bot pueda escribir al cliente, el cliente debe abrir el bot y enviar `/start` una
+   vez. Un bot no puede iniciar conversaciones por sí mismo.
 
 ### 5. Video del header
 
@@ -84,3 +88,8 @@ npm run dev
 - Nunca se usa `@username` de Telegram para decisiones de acceso, solo el `telegram_user_id`
   numérico obtenido de forma verificada vía el handshake `/start <token>`.
 - Todas las tablas de Supabase se acceden únicamente server-side con la service-role key.
+
+
+npm run setup:telegram
+
+stripe listen --forward-to https://tu-nueva-url.ngrok-free.dev/api/webhooks/stripe

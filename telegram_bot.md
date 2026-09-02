@@ -17,6 +17,7 @@ con tus credenciales y los dos grupos privados.
 - `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` sin `@`.
 - `TELEGRAM_CURSO_CHAT_ID` y `TELEGRAM_VIP_CHAT_ID`.
 - `TELEGRAM_WEBHOOK_SECRET` aleatorio y largo.
+- `TELEGRAM_CLIENT_CHAT_ID` del chat privado donde el cliente recibira avisos.
 - `NEXT_PUBLIC_SITE_URL` público por HTTPS.
 
 ## Orden recomendado
@@ -24,12 +25,13 @@ con tus credenciales y los dos grupos privados.
 1. Crea el bot en @BotFather.
 2. Añade el bot como administrador en ambos grupos, con permiso de invitar usuarios.
 3. Obtén los `chat_id` de los grupos.
-4. Completa `.env.local` con los valores anteriores.
-5. Ejecuta `npm run setup:telegram`.
-6. Copia los dos links que imprime la consola a:
+4. El cliente debe abrir el bot y enviar `/start` una vez; un bot no puede iniciar una conversacion por si mismo.
+5. Completa `.env.local` con los valores anteriores. `TELEGRAM_WEBHOOK_SECRET` no puede estar vacio.
+6. Ejecuta `npm run setup:telegram`.
+7. Copia los dos links que imprime la consola a:
    - `NEXT_PUBLIC_TELEGRAM_CURSO_JOIN_LINK`
    - `NEXT_PUBLIC_TELEGRAM_VIP_JOIN_LINK`
-7. Haz una prueba completa con Stripe en modo test.
+8. Ejecuta la migracion `supabase/migrations/0002_monthly_subscriptions.sql` en Supabase y haz una prueba completa con Stripe en modo test.
 
 ## Prueba rápida
 
@@ -42,5 +44,6 @@ con tus credenciales y los dos grupos privados.
 ## Si algo falla
 
 - Si el bot no responde, revisa que `TELEGRAM_WEBHOOK_SECRET` y el webhook registrado coincidan.
+- Para desarrollo, Telegram debe apuntar a `NEXT_PUBLIC_SITE_URL` (ngrok), mientras Stripe CLI debe reenviar a `localhost:3000/api/webhooks/stripe`.
 - Si no aprueba grupos, revisa que el bot siga siendo admin y que los `chat_id` sean correctos.
 - Si el enlace de conexión no aparece, revisa `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME`.
