@@ -7,8 +7,10 @@
 //
 // Antes de correrlo: el bot debe ya ser administrador de ambos grupos con
 // el permiso "Invitar usuarios" (can_invite_users).
-import "dotenv/config";
+import dotenv from "dotenv";
 import { createJoinRequestInviteLink, setWebhook, getWebhookInfo } from "../lib/telegram";
+
+dotenv.config({ path: ".env.local" });
 
 async function main() {
   const cursoChatId = requireEnv("TELEGRAM_CURSO_CHAT_ID");

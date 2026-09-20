@@ -4,6 +4,7 @@ import { stripe } from "@/lib/stripe";
 import { supabase } from "@/lib/supabase";
 import { tryApproveIfEligible } from "@/lib/access";
 import { sendPaymentFailureReport } from "@/lib/payment-report";
+import { notifyPaymentReceived } from "@/lib/telegram-admin";
 
 const DUPLICATE_KEY = "23505";
 
@@ -86,9 +87,13 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   const { data: person } = await supabase
     .from("people")
-    .select("telegram_user_id")
+    .select("email, telegram_username, telegram_user_id")
     .eq("id", personId)
     .maybeSingle();
+  await notifyPaymentReceived(
+    person?.email ?? (person?.telegram_username ? `@${person.telegram_username}` : personId.slice(0, 8)),
+    Boolean(subscriptionId),
+  );
   if (person?.telegram_user_id) {
     await tryApproveIfEligible(person.telegram_user_id);
   }

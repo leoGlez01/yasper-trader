@@ -32,6 +32,7 @@ con tus credenciales y los dos grupos privados.
    - `NEXT_PUBLIC_TELEGRAM_CURSO_JOIN_LINK`
    - `NEXT_PUBLIC_TELEGRAM_VIP_JOIN_LINK`
 8. Ejecuta la migracion `supabase/migrations/0002_monthly_subscriptions.sql` en Supabase y haz una prueba completa con Stripe en modo test.
+9. Ejecuta tambien `supabase/migrations/0003_class_tracking.sql` para activar el seguimiento de la clase.
 
 ## Prueba rápida
 
@@ -40,6 +41,15 @@ con tus credenciales y los dos grupos privados.
 3. Abre el bot, envía `/start`, y confirma que recibe los links.
 4. Entra a ambos grupos con "Solicitar unirse".
 5. Verifica que el bot aprueba automáticamente.
+
+## Comandos del cliente
+
+El cliente debe escribir al bot desde el chat cuyo ID está en `TELEGRAM_CLIENT_CHAT_ID`:
+
+- `/resumen`: totales de pagos y clases.
+- `/pagados`: lista numerada de clientes pagados y estado de su clase.
+- `/pendientes`: clientes sin pago vigente.
+- `/marcar_clase 1`: marca la clase del cliente número 1 de la lista `/pagados`.
 
 ## Si algo falla
 

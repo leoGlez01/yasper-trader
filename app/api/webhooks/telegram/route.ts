@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { sendMessage, type TelegramChatJoinRequest, type TelegramMessage } from "@/lib/telegram";
 import { tryApproveIfEligible } from "@/lib/access";
+import { handleAdminCommand } from "@/lib/telegram-admin";
 
 // Único chequeo de autenticidad del webhook de Telegram: un header secreto
 // compartido (Telegram no firma el body). Sin esto, cualquiera podría
@@ -24,8 +25,12 @@ export async function POST(req: NextRequest) {
   try {
     if (update.chat_join_request) {
       await handleJoinRequest(update.chat_join_request);
-    } else if (typeof update.message?.text === "string" && update.message.text.startsWith("/start")) {
-      await handleStart(update.message);
+    } else if (update.message?.text) {
+      if (update.message.text.startsWith("/start")) {
+        await handleStart(update.message);
+      } else {
+        await handleAdminCommand(update.message);
+      }
     }
   } catch (error) {
     console.error("Error procesando update de Telegram", error);
