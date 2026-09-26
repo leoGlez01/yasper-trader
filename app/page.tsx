@@ -26,7 +26,10 @@ export default async function HomePage() {
 
 function Hero() {
   return (
-    <section className="relative isolate overflow-hidden">
+    // Sin `overflow-hidden`: el popover de correo del botón "Comprar ahora" es
+    // hijo de esta sección y quedaba recortado. `ChartBackground` ya recorta su
+    // propio contenido, así que el gráfico sigue sin desbordar.
+    <section className="relative isolate">
       <ChartBackground />
 
       <div className="relative z-10 mx-auto grid max-w-5xl gap-8 px-6 pb-16 pt-20 sm:gap-12 sm:pt-28 lg:grid-cols-2 lg:items-center lg:gap-16 lg:pb-20 lg:pt-40">

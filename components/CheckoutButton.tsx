@@ -15,11 +15,16 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export function CheckoutButton({
   children,
   className,
-  menuAlign = "center",
+  menuAlign = "left",
 }: {
   children: React.ReactNode;
   className?: string;
-  menuAlign?: "center" | "right";
+  // Por qué no "centrado": centrar el popover sobre el botón lo empuja fuera de
+  // la pantalla cuando el botón está cerca de un borde, que es justo el caso del
+  // hero (columna de texto a la izquierda) en móvil. Alineado a la izquierda
+  // siempre cae dentro del viewport; el navbar usa "right" por estar al borde
+  // derecho.
+  menuAlign?: "left" | "right";
 }) {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
@@ -85,8 +90,8 @@ export function CheckoutButton({
         <form
           onSubmit={handleSubmit}
           className={`absolute top-full z-50 mt-2 flex w-72 flex-col gap-2 rounded-2xl border border-panel-border bg-panel p-3 shadow-xl sm:w-80 ${
-            menuAlign === "right" ? "right-0" : "left-1/2 -translate-x-1/2"
-          }`}
+            menuAlign === "right" ? "right-0" : "left-0"
+          } max-w-[calc(100vw-2rem)]`}
         >
           <input
             ref={inputRef}
