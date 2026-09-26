@@ -84,6 +84,19 @@ export function sendMessage(chatId: string | number, text: string) {
   return callTelegramApi("sendMessage", { chat_id: chatId, text, parse_mode: "HTML" });
 }
 
+// `sendMessage` siempre usa parse_mode HTML, así que cualquier dato de la base
+// (emails, @usernames) inyectado en el texto debe escaparse: si no, un solo
+// `&` o `<` hace que Telegram rechace el mensaje entero con 400.
+export function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  })[character] ?? character);
+}
+
 export function getChat(chatId: string | number) {
   return callTelegramApi("getChat", { chat_id: chatId });
 }

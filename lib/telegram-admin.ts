@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-import { sendMessage, type TelegramMessage } from "./telegram";
+import { escapeHtml, sendMessage, type TelegramMessage } from "./telegram";
 
 type Person = {
   id: string;
@@ -26,7 +26,8 @@ function isPaid(purchase: Purchase): boolean {
 }
 
 function displayName(person: Person): string {
-  return person.email || (person.telegram_username ? `@${person.telegram_username}` : person.id.slice(0, 8));
+  const name = person.email || (person.telegram_username ? `@${person.telegram_username}` : person.id.slice(0, 8));
+  return escapeHtml(name);
 }
 
 export async function notifyPaymentReceived(name: string, recurring: boolean): Promise<void> {
@@ -35,14 +36,21 @@ export async function notifyPaymentReceived(name: string, recurring: boolean): P
   try {
     await sendMessage(
       chatId,
-      `💳 <b>Pago recibido</b>\nCliente: ${name}\nTipo: ${recurring ? "suscripción mensual" : "pago"}\nClase: ⏳ pendiente`,
+      `💳 <b>Pago recibido</b>\nCliente: ${escapeHtml(name)}\nTipo: ${recurring ? "suscripción mensual" : "pago"}\nClase: ⏳ pendiente`,
     );
   } catch (error) {
     console.error("No se pudo avisar al cliente sobre el pago", error);
   }
 }
 
-async function loadCustomers() {
+export type Customer = {
+  person: Person;
+  paid: boolean;
+  purchases: number;
+  classCompletedAt: string | null;
+};
+
+export async function loadCustomers(): Promise<Customer[]> {
   const [{ data: people, error: peopleError }, { data: purchases, error: purchasesError }] = await Promise.all([
     supabase.from("people").select("id, email, telegram_username, class_completed_at, class_completed_by").order("created_at", { ascending: true }),
     supabase.from("purchases").select("person_id, status, next_payment_at, created_at").order("created_at", { ascending: false }),
@@ -51,21 +59,64 @@ async function loadCustomers() {
   if (purchasesError) throw purchasesError;
 
   const latestPurchase = new Map<string, Purchase>();
+  const purchaseCount = new Map<string, number>();
   for (const purchase of (purchases ?? []) as Purchase[]) {
     if (!latestPurchase.has(purchase.person_id)) latestPurchase.set(purchase.person_id, purchase);
+    purchaseCount.set(purchase.person_id, (purchaseCount.get(purchase.person_id) ?? 0) + 1);
   }
 
-  return ((people ?? []) as Person[]).map((person) => ({
-    person,
-    purchase: latestPurchase.get(person.id) ?? null,
-    paid: latestPurchase.has(person.id) && isPaid(latestPurchase.get(person.id)!),
-  }));
+  // Dos reglas de negocio que la base por sí sola no resuelve:
+  //
+  // 1. `people` se inserta al *iniciar* el checkout (app/api/checkout/route.ts)
+  //    y `purchases` solo al completarlo. Sin fila en `purchases` el carrito
+  //    quedó abandonado: no es un cliente pendiente y no se lista.
+  // 2. Cada intento de compra crea una fila nueva en `people`, así que un
+  //    cliente que compró varias veces aparece como N personas distintas. Se
+  //    agrupan por email normalizado (con caída a @username y luego al id).
+  const groups = new Map<string, Customer>();
+  for (const person of (people ?? []) as Person[]) {
+    const purchase = latestPurchase.get(person.id);
+    if (!purchase) continue;
+
+    const key = person.email?.trim().toLowerCase()
+      || (person.telegram_username ? `@${person.telegram_username.toLowerCase()}` : person.id);
+    const nowPaid = isPaid(purchase);
+    const existing = groups.get(key);
+    if (!existing) {
+      groups.set(key, {
+        person,
+        paid: nowPaid,
+        purchases: purchaseCount.get(person.id) ?? 1,
+        classCompletedAt: person.class_completed_at,
+      });
+      continue;
+    }
+
+    existing.purchases += purchaseCount.get(person.id) ?? 1;
+    // La fila representativa debe ser la que concede acceso: si el grupo tiene
+    // alguna compra vigente, /marcar_clase tiene que caer sobre esa fila y no
+    // sobre una cancelada, o el cliente perdería el grupo de Telegram.
+    if (nowPaid && !existing.paid) {
+      existing.paid = true;
+      existing.person = person;
+    }
+    // La clase se impartió una sola vez: se conserva la fecha real más temprana.
+    const classAt = person.class_completed_at;
+    if (classAt && (!existing.classCompletedAt || classAt < existing.classCompletedAt)) {
+      existing.classCompletedAt = classAt;
+    }
+  }
+
+  return [...groups.values()];
 }
 
-function formatCustomer(customer: Awaited<ReturnType<typeof loadCustomers>>[number], index: number): string {
-  const classStatus = customer.person.class_completed_at ? "✅ clase impartida" : "⏳ clase pendiente";
-  return `${index}. ${displayName(customer.person)} — ${classStatus}`;
+export function formatCustomer(customer: Customer, index: number): string {
+  const classStatus = customer.classCompletedAt ? "✅ clase impartida" : "⏳ clase pendiente";
+  const repeated = customer.purchases > 1 ? ` (${customer.purchases} compras)` : "";
+  return `${index}. ${displayName(customer.person)} — ${classStatus}${repeated}`;
 }
+
+const ADMIN_COMMANDS = ["/pagados", "/pendientes", "/resumen", "/marcar_clase"] as const;
 
 export async function handleAdminCommand(message: TelegramMessage): Promise<boolean> {
   const authorizedChatId = clientChatId();
@@ -73,6 +124,15 @@ export async function handleAdminCommand(message: TelegramMessage): Promise<bool
 
   const [rawCommand, argument] = message.text.trim().split(/\s+/, 2);
   const command = rawCommand.toLowerCase().split("@")[0];
+
+  // Se valida el comando antes de tocar la base: un typo no debe costar dos
+  // lecturas completas de `people` + `purchases`, y siempre debe responder algo
+  // (el silencio en Telegram es imposible de depurar).
+  if (!(ADMIN_COMMANDS as readonly string[]).includes(command)) {
+    await sendMessage(message.chat.id, `Comando desconocido: ${escapeHtml(command)}\nDisponibles: ${ADMIN_COMMANDS.join(", ")}`);
+    return true;
+  }
+
   const customers = await loadCustomers();
   const paid = customers.filter((customer) => customer.paid);
   const pending = customers.filter((customer) => !customer.paid);
@@ -88,7 +148,7 @@ export async function handleAdminCommand(message: TelegramMessage): Promise<bool
   }
 
   if (command === "/resumen") {
-    await sendMessage(message.chat.id, `<b>Resumen</b>\nPagados y vigentes: ${paid.length}\nPendientes o vencidos: ${pending.length}\nClase impartida: ${paid.filter((customer) => customer.person.class_completed_at).length}\nClase pendiente: ${paid.filter((customer) => !customer.person.class_completed_at).length}`);
+    await sendMessage(message.chat.id, `<b>Resumen</b>\nPagados y vigentes: ${paid.length}\nPendientes o vencidos: ${pending.length}\nClase impartida: ${paid.filter((customer) => customer.classCompletedAt).length}\nClase pendiente: ${paid.filter((customer) => !customer.classCompletedAt).length}`);
     return true;
   }
 
@@ -109,5 +169,5 @@ export async function handleAdminCommand(message: TelegramMessage): Promise<bool
     return true;
   }
 
-  return false;
+  return true;
 }

@@ -42,7 +42,9 @@ export function SiteHeader() {
         </Link>
 
         <div className="flex items-center gap-2 sm:gap-3">
-          <CheckoutButton className={NAV_CTA_CLASSES}>Comenzar</CheckoutButton>
+          <CheckoutButton className={NAV_CTA_CLASSES} menuAlign="right">
+            Comenzar
+          </CheckoutButton>
           <ThemeToggle />
         </div>
       </div>

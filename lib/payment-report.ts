@@ -1,15 +1,5 @@
 import { supabase } from "./supabase";
-import { sendMessage } from "./telegram";
-
-function escapeHtml(value: string): string {
-  return value.replace(/[&<>"']/g, (character) => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#39;",
-  })[character] ?? character);
-}
+import { escapeHtml, sendMessage } from "./telegram";
 
 export async function sendPaymentFailureReport(): Promise<void> {
   const clientChatId = process.env.TELEGRAM_CLIENT_CHAT_ID;

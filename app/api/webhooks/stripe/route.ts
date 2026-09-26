@@ -45,6 +45,11 @@ export async function POST(req: NextRequest) {
     }
   } catch (error) {
     console.error(`Error procesando evento de Stripe ${event.type}`, error);
+    // La fila de idempotencia se había insertado ANTES de procesar. Si no se
+    // libera, el reintento de Stripe caería en el dedupe y devolvería 200 sin
+    // hacer nada: el evento se perdería para siempre. Liberándola, el reintento
+    // reprocesa de verdad.
+    await supabase.from("stripe_webhook_events").delete().eq("id", event.id);
     return NextResponse.json({ error: "error interno" }, { status: 500 });
   }
 
@@ -58,15 +63,19 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const customerId = typeof session.customer === "string" ? session.customer : session.customer?.id;
   const subscriptionId = typeof session.subscription === "string" ? session.subscription : session.subscription?.id;
   const subscription = subscriptionId ? await stripe.subscriptions.retrieve(subscriptionId) : null;
-  await supabase
+  const { error: personError } = await supabase
     .from("people")
     .update({
       ...(session.customer_details?.email ? { email: session.customer_details.email } : {}),
       ...(customerId ? { stripe_customer_id: customerId } : {}),
     })
     .eq("id", personId);
+  // No es fatal: el pago ya está confirmado y registrar la compra importa más
+  // que guardar el email. Pero si falla, la persona queda sin identificar en
+  // /pagados, así que tiene que quedar en el log.
+  if (personError) console.error("No se pudo actualizar la persona con el pago", personError);
 
-  await supabase.from("purchases").upsert(
+  const { error: purchaseError } = await supabase.from("purchases").upsert(
     {
       person_id: personId,
       stripe_checkout_session_id: session.id,
@@ -84,6 +93,9 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     },
     { onConflict: "stripe_checkout_session_id" },
   );
+  // Sin comprobarlo, un fallo del upsert era invisible: el cliente había pagado
+  // y se quedaba sin compra, sin aviso y sin acceso a los grupos.
+  if (purchaseError) throw purchaseError;
 
   const { data: person } = await supabase
     .from("people")

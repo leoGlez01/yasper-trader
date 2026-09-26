@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "setup:telegram": "tsx scripts/setup-telegram.ts"
+    "setup:telegram": "tsx scripts/setup-telegram.ts",
+    "cleanup:orphans": "tsx scripts/cleanup-orphan-people.ts",
+    "replay:stripe": "tsx scripts/replay-stripe-event.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.8",
