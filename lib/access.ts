@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { isTestSession } from "./stripe";
 import { approveChatJoinRequest } from "./telegram";
 
 function chatIds(): number[] {
@@ -8,15 +9,20 @@ function chatIds(): number[] {
   return [Number(curso), Number(vip)];
 }
 
-async function hasPaid(personId: string): Promise<boolean> {
+export async function hasPaid(personId: string): Promise<boolean> {
   const { data } = await supabase
     .from("purchases")
-    .select("id, next_payment_at")
+    .select("id, next_payment_at, stripe_checkout_session_id")
     .eq("person_id", personId)
     .eq("status", "paid")
-    .limit(1);
+    .limit(50);
+  // Una compra pagada en modo prueba (`cs_test_`) no da acceso a los grupos de
+  // pago: son sesiones que nunca movieron dinero. Es el mismo criterio que
+  // aplica a las estadísticas del bot, para que ambos coincidan.
   return (data ?? []).some(
-    (purchase) => !purchase.next_payment_at || new Date(purchase.next_payment_at) > new Date(),
+    (purchase) =>
+      !isTestSession(purchase.stripe_checkout_session_id) &&
+      (!purchase.next_payment_at || new Date(purchase.next_payment_at) > new Date()),
   );
 }
 

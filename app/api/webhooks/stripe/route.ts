@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import type Stripe from "stripe";
-import { stripe } from "@/lib/stripe";
+import { isTestSession, stripe } from "@/lib/stripe";
 import { supabase } from "@/lib/supabase";
 import { tryApproveIfEligible } from "@/lib/access";
 import { sendPaymentFailureReport } from "@/lib/payment-report";
@@ -102,10 +102,15 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     .select("email, telegram_username, telegram_user_id")
     .eq("id", personId)
     .maybeSingle();
-  await notifyPaymentReceived(
-    person?.email ?? (person?.telegram_username ? `@${person.telegram_username}` : personId.slice(0, 8)),
-    Boolean(subscriptionId),
-  );
+  // Un pago de prueba no se anuncia: el aviso de "pago recibido" es para cobrar
+  // atención sobre clientes reales, y ensuciarlo con `cs_test_` hace que se
+  // tenga que revisar cada notificación.
+  if (!isTestSession(session.id)) {
+    await notifyPaymentReceived(
+      person?.email ?? (person?.telegram_username ? `@${person.telegram_username}` : personId.slice(0, 8)),
+      Boolean(subscriptionId),
+    );
+  }
   if (person?.telegram_user_id) {
     await tryApproveIfEligible(person.telegram_user_id);
   }

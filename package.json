@@ -9,6 +9,7 @@
     "lint": "eslint",
     "setup:telegram": "tsx scripts/setup-telegram.ts",
     "cleanup:orphans": "tsx scripts/cleanup-orphan-people.ts",
+    "cleanup:test": "tsx scripts/cleanup-test-data.ts",
     "replay:stripe": "tsx scripts/replay-stripe-event.ts"
   },
   "dependencies": {

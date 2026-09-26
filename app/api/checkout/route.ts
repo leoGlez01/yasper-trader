@@ -15,9 +15,12 @@ function normalizeEmail(value: unknown): string | null {
 }
 
 // `link_tokens.person_id` tiene FK a `people`, así que el token va primero.
-async function discardPerson(personId: string): Promise<void> {
+// `createdPerson` evita borrar a alguien que ya existía: si el cliente ya estaba
+// registrado, una compra fallida no debe costarle el histórico.
+async function discardPerson(personId: string, createdPerson: boolean): Promise<void> {
   const { error: tokenError } = await supabase.from("link_tokens").delete().eq("person_id", personId);
   if (tokenError) console.error("No se pudo borrar el link_token huérfano", tokenError);
+  if (!createdPerson) return;
   const { error: personError } = await supabase.from("people").delete().eq("id", personId);
   if (personError) console.error("No se pudo borrar la persona huérfana", personError);
 }
@@ -49,25 +52,48 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "El precio de Stripe no es válido" }, { status: 500 });
   }
 
-  const { data: person, error: personError } = await supabase
+  // Reutilizar la persona si el correo ya existe. Si no, cada recompra crea una
+  // fila nueva en `people` y el `/start` posterior choca contra el índice único
+  // de `telegram_user_id`, dejando al cliente recurrente sin enlaces de grupo.
+  const { data: existing, error: existingError } = await supabase
     .from("people")
-    .insert({ email })
     .select("id")
-    .single();
-  if (personError || !person) {
-    console.error("No se pudo crear el registro de persona", personError);
+    .ilike("email", email)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (existingError) {
+    console.error("No se pudo buscar la persona por correo", existingError);
     return NextResponse.json({ error: "No se pudo iniciar la compra" }, { status: 500 });
   }
 
-  // Desde aquí la persona ya existe en la base: cualquier fallo posterior tiene
-  // que deshacerla o cada intento fallido deja una persona fantasma inflando
+  let personId: string;
+  let createdPerson = false;
+  if (existing) {
+    personId = existing.id;
+  } else {
+    const { data: person, error: personError } = await supabase
+      .from("people")
+      .insert({ email })
+      .select("id")
+      .single();
+    if (personError || !person) {
+      console.error("No se pudo crear el registro de persona", personError);
+      return NextResponse.json({ error: "No se pudo iniciar la compra" }, { status: 500 });
+    }
+    personId = person.id;
+    createdPerson = true;
+  }
+
+  // Desde aquí la persona ya está en la base: cualquier fallo posterior tiene que
+  // deshacer el token, o cada intento fallido deja una persona fantasma inflando
   // /pendientes para siempre.
   const { error: tokenError } = await supabase
     .from("link_tokens")
-    .insert({ token: generateLinkToken(), person_id: person.id });
+    .insert({ token: generateLinkToken(), person_id: personId });
   if (tokenError) {
     console.error("No se pudo generar el link_token", tokenError);
-    await discardPerson(person.id);
+    await discardPerson(personId, createdPerson);
     return NextResponse.json({ error: "No se pudo iniciar la compra" }, { status: 500 });
   }
 
@@ -78,7 +104,7 @@ export async function POST(req: Request) {
       mode,
       managed_payments: { enabled: false },
       line_items: [{ price: priceId, quantity: 1 }],
-      client_reference_id: person.id,
+      client_reference_id: personId,
       // Prefill en la página de Stripe: el comprador no lo vuelve a escribir.
       customer_email: email,
       ...(mode === "payment" ? { customer_creation: "always" as const } : {}),
@@ -87,12 +113,12 @@ export async function POST(req: Request) {
     });
   } catch (error) {
     console.error("Stripe rechazó la creación de la sesión de checkout", error);
-    await discardPerson(person.id);
+    await discardPerson(personId, createdPerson);
     return NextResponse.json({ error: "Stripe todavía no está configurado" }, { status: 500 });
   }
 
   if (!session.url) {
-    await discardPerson(person.id);
+    await discardPerson(personId, createdPerson);
     return NextResponse.json({ error: "No se pudo crear la sesión de pago" }, { status: 500 });
   }
 

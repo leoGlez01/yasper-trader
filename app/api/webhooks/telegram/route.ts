@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { sendMessage, type TelegramChatJoinRequest, type TelegramMessage } from "@/lib/telegram";
-import { tryApproveIfEligible } from "@/lib/access";
+import { hasPaid, tryApproveIfEligible } from "@/lib/access";
 import { handleAdminCommand } from "@/lib/telegram-admin";
 
 // Único chequeo de autenticidad del webhook de Telegram: un header secreto
@@ -74,12 +74,49 @@ async function handleJoinRequest(joinRequest: TelegramChatJoinRequest) {
   await tryApproveIfEligible(telegramUserId);
 }
 
+const JOIN_INSTRUCTIONS = 'Abre cada enlace y toca "Solicitar unirse" — te aprobaremos automáticamente en cuanto confirmemos tu pago:';
+
+// Un solo pago da acceso a los dos grupos, así que los enlaces siempre van juntos.
+function groupsMessage(intro: string): string {
+  const cursoLink = process.env.NEXT_PUBLIC_TELEGRAM_CURSO_JOIN_LINK;
+  const vipLink = process.env.NEXT_PUBLIC_TELEGRAM_VIP_JOIN_LINK;
+  return `${intro}\n\n${JOIN_INSTRUCTIONS}\n\nGrupo Curso: ${cursoLink}\nGrupo VIP: ${vipLink}`;
+}
+
+// Si esta persona ya tiene una compra registrada, se le pasan los dos enlaces en
+// vez de un error. Hace falta porque el deep link puede llegar ya usado (el
+// cliente reabre la página de éxito, reutiliza el enlace, o compra por segunda
+// vez y el token nuevo choca con el Telegram que ya tenía vinculado): ninguna de
+// esas situaciones debe dejar a quien ya pagó sin acceso.
+async function sendGroupsIfAlreadyPaid(
+  telegramUserId: number,
+  tokenPersonId: string | null,
+  lead: string,
+): Promise<boolean> {
+  let personId = tokenPersonId;
+  if (!personId) {
+    const { data: linked } = await supabase
+      .from("people")
+      .select("id")
+      .eq("telegram_user_id", telegramUserId)
+      .maybeSingle();
+    personId = linked?.id ?? null;
+  }
+  if (!personId || !(await hasPaid(personId))) return false;
+
+  await sendMessage(telegramUserId, groupsMessage(lead));
+  await tryApproveIfEligible(telegramUserId);
+  return true;
+}
+
 async function handleStart(message: TelegramMessage) {
   const telegramUserId: number = message.from.id;
   const telegramUsername: string | null = message.from.username ?? null;
   const token = (message.text as string).split(" ")[1];
 
   if (!token) {
+    const served = await sendGroupsIfAlreadyPaid(telegramUserId, null, "👋 Ya tienes el acceso activo, aquí van tus grupos:");
+    if (served) return;
     await sendMessage(telegramUserId, "Hola 👋 Usa el enlace que recibiste tras tu compra para conectar tu cuenta.");
     return;
   }
@@ -91,6 +128,12 @@ async function handleStart(message: TelegramMessage) {
     .maybeSingle();
 
   if (!linkToken || linkToken.status === "used") {
+    const served = await sendGroupsIfAlreadyPaid(
+      telegramUserId,
+      linkToken?.person_id ?? null,
+      "👋 Ya tienes el acceso activo, aquí van tus grupos:",
+    );
+    if (served) return;
     await sendMessage(telegramUserId, "Ese enlace no es válido o ya fue usado. Si acabas de comprar, contáctanos para ayudarte.");
     return;
   }
@@ -102,6 +145,16 @@ async function handleStart(message: TelegramMessage) {
 
   if (linkError) {
     if (linkError.code === DUPLICATE_KEY) {
+      // Este Telegram ya estaba atado a otra fila de `people` (típico cuando el
+      // cliente ya había comprado antes y esta compra creó una fila nueva). Si
+        // esa otra fila tiene compra, quien escribe ES ese cliente: se le pasan
+        // los grupos en lugar de dejarlo con un "contáctanos".
+      const served = await sendGroupsIfAlreadyPaid(
+        telegramUserId,
+        null,
+        "👋 Ya tienes el acceso activo, aquí van tus grupos:",
+      );
+      if (served) return;
       await sendMessage(
         telegramUserId,
         "Esta cuenta de Telegram ya está vinculada a otra compra. Si crees que es un error, contáctanos.",
@@ -117,12 +170,9 @@ async function handleStart(message: TelegramMessage) {
     .update({ status: "used", used_at: new Date().toISOString() })
     .eq("token", token);
 
-  const cursoLink = process.env.NEXT_PUBLIC_TELEGRAM_CURSO_JOIN_LINK;
-  const vipLink = process.env.NEXT_PUBLIC_TELEGRAM_VIP_JOIN_LINK;
-
   await sendMessage(
     telegramUserId,
-    `✅ ¡Cuenta conectada! Tu compra te da acceso a los dos grupos. Abre cada enlace y toca "Solicitar unirse" — te aprobaremos automáticamente en cuanto confirmemos tu pago:\n\nGrupo Curso: ${cursoLink}\nGrupo VIP: ${vipLink}`,
+    groupsMessage("✅ ¡Cuenta conectada! Tu compra te da acceso a los dos grupos."),
   );
 
   await tryApproveIfEligible(telegramUserId);
