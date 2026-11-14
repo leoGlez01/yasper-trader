@@ -106,7 +106,7 @@ export function CheckoutButton({
             aria-label="Correo electrónico"
             className={INPUT_CLASSES}
           />
-          <button type="submit" disabled={loading} className={`${className ?? DEFAULT_CLASSES} w-full !py-2.5 text-sm`}>
+          <button type="submit" disabled={loading} className={`${className ?? DEFAULT_CLASSES} w-full py-2.5! text-sm`}>
             {loading ? "Redirigiendo..." : "Continuar al pago"}
           </button>
           <button
