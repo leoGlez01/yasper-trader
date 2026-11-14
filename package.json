@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test:community": "tsx --test tests/community-access.test.ts",
     "setup:telegram": "tsx scripts/setup-telegram.ts",
+    "setup:community-telegram": "tsx scripts/setup-community-telegram.ts",
     "cleanup:orphans": "tsx scripts/cleanup-orphan-people.ts",
     "cleanup:test": "tsx scripts/cleanup-test-data.ts",
     "replay:stripe": "tsx scripts/replay-stripe-event.ts"

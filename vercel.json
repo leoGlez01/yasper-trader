@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/community-enforce",
+      "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/community-report",
+      "schedule": "0 9 * * *"
+    }
+  ]
+}

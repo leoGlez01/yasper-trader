@@ -1,7 +1,8 @@
 # Yasper Trader
 
-Sitio web de Yasper — Mentoría de Traders. Un producto vía Stripe con cobro mensual: **Curso Cero a Trader**, que desbloquea a la vez los dos grupos privados de
-Telegram (Curso y VIP).
+Sitio web de Yasper — Mentoría de Traders. El producto original de pago puntual desbloquea los
+grupos privados Curso y VIP. La membresía mensual nueva usa un producto de Stripe, un grupo y un
+bot independientes, aunque comparte el sitio y la base de datos.
 
 El acceso a ambos grupos se protege sin exponer nunca un link "secreto": los grupos exigen
 aprobación para unirse, y un bot de Telegram aprueba automáticamente solo a quienes tienen un
@@ -41,19 +42,25 @@ npm install
 
 Si quieres la guía operativa paso a paso para este flujo, revisa [telegram_bot.md](telegram_bot.md).
 
+La membresía mensual con grupo y bot independientes está documentada en
+[community_subscription.md](community_subscription.md).
+
 ### 4. Configurar Stripe
 
-1. En modo de prueba, crea un producto con un Price recurrente mensual (`recurring/month`).
+1. En modo de prueba, crea un producto con un Price de pago único para el producto original.
 2. Copia el ID del Price a `STRIPE_PRICE_ID`, y tu clave secreta a `STRIPE_SECRET_KEY`.
 3. En desarrollo, usa la [Stripe CLI](https://docs.stripe.com/stripe-cli) para reenviar webhooks:
    ```bash
    stripe listen --forward-to localhost:3000/api/webhooks/stripe
    ```
-   La CLI te da un `whsec_...` — pégalo en `STRIPE_WEBHOOK_SECRET`. Escucha también `invoice.paid`,
-   `invoice.payment_failed`, `customer.subscription.updated` y `customer.subscription.deleted`.
-   En producción, crea el
+   La CLI te da un `whsec_...` — pégalo en `STRIPE_WEBHOOK_SECRET`. Para el producto original basta
+   con `checkout.session.completed`. En producción, crea el
    webhook endpoint desde el Dashboard de Stripe apuntando a
-   `https://tudominio.com/api/webhooks/stripe`, suscrito a esos cinco eventos.
+   `https://tudominio.com/api/webhooks/stripe`, suscrito a `checkout.session.completed`.
+
+   La membresía mensual usa otro producto recurrente y otro endpoint; sigue
+   [community_subscription.md](community_subscription.md) para configurarla sin mezclarla con este
+   producto ni con su bot.
 
    Para que el bot pueda escribir al cliente, el cliente debe abrir el bot y enviar `/start` una
    vez. Un bot no puede iniciar conversaciones por sí mismo.

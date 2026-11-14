@@ -16,6 +16,7 @@ export function CheckoutButton({
   children,
   className,
   menuAlign = "left",
+  endpoint = "/api/checkout",
 }: {
   children: React.ReactNode;
   className?: string;
@@ -25,6 +26,7 @@ export function CheckoutButton({
   // siempre cae dentro del viewport; el navbar usa "right" por estar al borde
   // derecho.
   menuAlign?: "left" | "right";
+  endpoint?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
@@ -64,7 +66,7 @@ export function CheckoutButton({
     setError(null);
     setLoading(true);
     try {
-      const response = await fetch("/api/checkout", {
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: trimmed }),

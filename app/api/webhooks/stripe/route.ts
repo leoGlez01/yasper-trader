@@ -7,6 +7,7 @@ import { sendPaymentFailureReport } from "@/lib/payment-report";
 import { notifyPaymentReceived } from "@/lib/telegram-admin";
 
 const DUPLICATE_KEY = "23505";
+const SEPARATE_COMMUNITY_FLOW = "community_telegram_v1";
 
 export async function POST(req: NextRequest) {
   const rawBody = await req.text();
@@ -57,6 +58,7 @@ export async function POST(req: NextRequest) {
 }
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
+  if (session.metadata?.product_flow === SEPARATE_COMMUNITY_FLOW) return;
   const personId = session.client_reference_id;
   if (!personId) return;
 
@@ -125,6 +127,7 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
   const subscriptionId = invoiceSubscriptionId(invoice);
   if (!subscriptionId) return;
   const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+  if (subscription.metadata.product_flow === SEPARATE_COMMUNITY_FLOW) return;
   await supabase.from("purchases").update({
     status: "paid",
     subscription_status: subscription.status,
@@ -138,16 +141,28 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
 
 async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
   const subscriptionId = invoiceSubscriptionId(invoice);
-  if (subscriptionId) {
-    await supabase.from("purchases").update({
-      status: "past_due",
-      last_payment_failed_at: new Date().toISOString(),
-    }).eq("stripe_subscription_id", subscriptionId);
-  }
+  if (!subscriptionId) return;
+  const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+  if (subscription.metadata.product_flow === SEPARATE_COMMUNITY_FLOW) return;
+
+  const { data: purchase, error: purchaseError } = await supabase
+    .from("purchases")
+    .select("id")
+    .eq("stripe_subscription_id", subscriptionId)
+    .maybeSingle();
+  if (purchaseError) throw purchaseError;
+  if (!purchase) return;
+
+  const { error } = await supabase.from("purchases").update({
+    status: "past_due",
+    last_payment_failed_at: new Date().toISOString(),
+  }).eq("stripe_subscription_id", subscriptionId);
+  if (error) throw error;
   await sendPaymentFailureReport();
 }
 
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
+  if (subscription.metadata.product_flow === SEPARATE_COMMUNITY_FLOW) return;
   await supabase.from("purchases").update({
     status: subscription.status === "active" || subscription.status === "trialing" ? "paid" : subscription.status === "canceled" ? "canceled" : "past_due",
     subscription_status: subscription.status,
@@ -158,6 +173,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
 }
 
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
+  if (subscription.metadata.product_flow === SEPARATE_COMMUNITY_FLOW) return;
   await supabase.from("purchases").update({
     status: "canceled",
     subscription_status: subscription.status,
