@@ -42,9 +42,9 @@ el sitio web, Stripe y la tabla `people` de Supabase, pero usa tablas, webhooks 
    `customer.subscription.resumed` y `customer.subscription.deleted`. Guarda su firma en
    `STRIPE_COMMUNITY_WEBHOOK_SECRET`. Conserva también el endpoint del producto actual; el webhook
    existente ignora los eventos marcados como `community_telegram_v1`.
-7. El proyecto debe estar en Vercel Pro para la revisión horaria. `vercel.json` ejecuta la
-   expulsión cada hora y envía el listado diario a las 09:00 UTC. Vercel añade la cabecera de
-   autorización usando `CRON_SECRET`.
+7. Los cron jobs de esta funcionalidad están desactivados mientras se pospone su lanzamiento.
+   Al retomarla, la revisión horaria requiere Vercel Pro; en Hobby habría que diseñar otra
+   estrategia de ejecución. El listado diario también deberá configurarse al reactivar la función.
 
 ## Experiencia y reglas
 
