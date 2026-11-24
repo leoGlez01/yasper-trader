@@ -42,12 +42,13 @@ export function SiteHeader() {
         </Link>
 
         <div className="flex items-center gap-2 sm:gap-3">
-          <Link
+          {/* Por ahora ira oculto hasta que lo vayamos a empezar a implementar */}
+          {/* <Link
             href="/comunidad"
             className="rounded-full px-3 py-1.5 text-xs font-semibold text-foreground/70 transition hover:text-gold-light sm:px-4 sm:py-2 sm:text-sm"
           >
             Comunidad mensual
-          </Link>
+          </Link> */}
           <CheckoutButton className={NAV_CTA_CLASSES} menuAlign="right">
             Comenzar
           </CheckoutButton>

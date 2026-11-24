@@ -32,8 +32,8 @@ function Hero() {
     <section className="relative isolate">
       <ChartBackground />
 
-      <div className="relative z-10 mx-auto grid max-w-5xl gap-8 px-6 pb-16 pt-20 sm:gap-12 sm:pt-28 lg:grid-cols-2 lg:items-center lg:gap-16 lg:pb-20 lg:pt-40">
-        <Reveal delay={0} className="order-1 flex justify-center lg:order-2 lg:justify-end">
+      <div className="relative z-10 mx-auto grid max-w-7xl gap-8 px-6 pb-16 pt-20 sm:gap-12 sm:pt-28 lg:grid-cols-2 lg:items-start lg:gap-16 lg:px-10 lg:pb-24 lg:pt-28">
+        <Reveal delay={0} className="order-1 flex justify-center lg:order-2 lg:mt-12 lg:justify-end">
           <HeroVideo src={process.env.NEXT_PUBLIC_HERO_VIDEO_URL} />
         </Reveal>
 
@@ -45,15 +45,20 @@ function Hero() {
           </Reveal>
 
           <Reveal delay={140}>
-            <h1 className="mt-6 text-4xl font-bold tracking-tight text-white sm:text-6xl">
+            <h1 className="mt-6 text-4xl font-bold tracking-tight text-white sm:text-6xl lg:text-5xl">
               Conviértete en un trader consistente
             </h1>
           </Reveal>
           <Reveal delay={200}>
-            <p className="mt-5 max-w-xl text-lg text-white/70">
-              Aprende a operar Oro, Nasdaq y Dow Jones directamente conmigo, y entra de una vez al
-              grupo VIP donde comparto análisis.
-            </p>
+            <div className="mt-5 max-w-xl text-lg text-white/70">
+              <p className="font-medium text-white/85">¿Qué incluye tu acceso?</p>
+              <ul className="mt-3 space-y-3 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0 lg:text-base">
+                <li className="lg:rounded-xl lg:border lg:border-white/10 lg:bg-white/[0.04] lg:p-4 lg:text-sm lg:leading-relaxed">• Grupo VIP: mis análisis y las zonas exactas donde voy a operar cada día en Oro, Nasdaq y Dow Jones, además de información sobre acciones que puede que compre.</li>
+                <li className="lg:rounded-xl lg:border lg:border-white/10 lg:bg-white/[0.04] lg:p-4 lg:text-sm lg:leading-relaxed">• 2 reuniones VIP al mes: para revisar operativa, contexto de mercado y resolver dudas.</li>
+                <li className="lg:rounded-xl lg:border lg:border-white/10 lg:bg-white/[0.04] lg:p-4 lg:text-sm lg:leading-relaxed">• Clases en vivo “De Cero a Trader”: participas directamente en las clases del mes en el que entras al grupo.</li>
+                <li className="lg:rounded-xl lg:border lg:border-white/10 lg:bg-white/[0.04] lg:p-4 lg:text-sm lg:leading-relaxed">• Biblioteca “De Cero a Trader” (actualización constante): acceso a todas las clases grabadas y ordenadas paso a paso, explicadas de forma tan clara que lo entiende hasta un niño.</li>
+              </ul>
+            </div>
           </Reveal>
 
           <Reveal delay={260}>
@@ -76,7 +81,7 @@ function OfferSection({ price }: { price: string | null }) {
         <div className="rounded-3xl border border-panel-border bg-panel p-8 sm:p-12">
           <div className="text-center">
             <span className="inline-flex items-center gap-2 rounded-full bg-gold/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-gold">
-              🔥 Dos clases 1 a 1 conmigo 🔥
+              🔥 Un Solo Pago 🔥
             </span>
             <h2 className="mt-5 text-3xl font-bold text-gold-light sm:text-4xl">Curso Cero a Trader</h2>
             <p className="mt-3 text-foreground/70">
