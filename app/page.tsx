@@ -53,10 +53,10 @@ function Hero() {
             <div className="mt-5 max-w-xl text-lg text-white/70">
               <p className="font-medium text-white/85">¿Qué incluye tu acceso?</p>
               <ul className="mt-3 space-y-3 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0 lg:text-base">
-                <li className="lg:rounded-xl lg:border lg:border-white/10 lg:bg-white/[0.04] lg:p-4 lg:text-sm lg:leading-relaxed">• Grupo VIP: mis análisis y las zonas exactas donde voy a operar cada día en Oro, Nasdaq y Dow Jones, además de información sobre acciones que puede que compre.</li>
-                <li className="lg:rounded-xl lg:border lg:border-white/10 lg:bg-white/[0.04] lg:p-4 lg:text-sm lg:leading-relaxed">• 2 reuniones VIP al mes: para revisar operativa, contexto de mercado y resolver dudas.</li>
-                <li className="lg:rounded-xl lg:border lg:border-white/10 lg:bg-white/[0.04] lg:p-4 lg:text-sm lg:leading-relaxed">• Clases en vivo “De Cero a Trader”: participas directamente en las clases del mes en el que entras al grupo.</li>
-                <li className="lg:rounded-xl lg:border lg:border-white/10 lg:bg-white/[0.04] lg:p-4 lg:text-sm lg:leading-relaxed">• Biblioteca “De Cero a Trader” (actualización constante): acceso a todas las clases grabadas y ordenadas paso a paso, explicadas de forma tan clara que lo entiende hasta un niño.</li>
+                <li className="lg:rounded-xl lg:border lg:border-white/10 lg:bg-white/4 lg:p-4 lg:text-sm lg:leading-relaxed">• Grupo VIP: mis análisis y las zonas exactas donde voy a operar cada día en Oro, Nasdaq y Dow Jones, además de información sobre acciones que puede que compre.</li>
+                <li className="lg:rounded-xl lg:border lg:border-white/10 lg:bg-white/4 lg:p-4 lg:text-sm lg:leading-relaxed">• 2 reuniones VIP al mes: para revisar operativa, contexto de mercado y resolver dudas.</li>
+                <li className="lg:rounded-xl lg:border lg:border-white/10 lg:bg-white/4 lg:p-4 lg:text-sm lg:leading-relaxed">• Clases en vivo “De Cero a Trader”: participas directamente en las clases del mes en el que entras al grupo.</li>
+                <li className="lg:rounded-xl lg:border lg:border-white/10 lg:bg-white/4 lg:p-4 lg:text-sm lg:leading-relaxed">• Biblioteca “De Cero a Trader” (actualización constante): acceso a todas las clases grabadas y ordenadas paso a paso, explicadas de forma tan clara que lo entiende hasta un niño.</li>
               </ul>
             </div>
           </Reveal>
